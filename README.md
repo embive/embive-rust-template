@@ -22,8 +22,8 @@ A simple program that runs inside the Embive interpreter.
 - Add Embive as a dependency
     - `$ cargo add embive`
 - Copy the example from Embive's docs/readme.
-- Swap the `let code = ...` to `let code = include_bytes!("../app.bin");`
-    - You can also remove the `ram[..4].copy_from_slice...` line, but it isn't necessary (we'll overwrite it anyway).
+- Swap the line `let code = ...` to `let code = include_bytes!("../app.bin");`
+    - You can also remove the line `ram[..4].copy_from_slice...` (not needed / unused).
 - Copy the generated `app.bin` to your project
 - Run it:  
     - `$ cargo run --release`
@@ -33,12 +33,12 @@ You can calculate the minimum amount of RAM needed by you application with the f
 `total_ram = data + bss + stack`
 
 To get the `data` and `bss` sizes, you can run:  
-`$ cargo size`
+`$ cargo size --release`
 
 The result should be something like this:
 ```
    text    data     bss     dec     hex filename
-   2240       4       0    2244     8c4 embive-rust-template
+    152       4       0     156      9c embive-rust-template
 ```
 
 For this result, if we chose a stack size of 512 bytes, our minimum RAM size then would be:  
