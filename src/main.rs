@@ -8,9 +8,6 @@ use core::ptr::addr_of;
 use embive::syscall;
 
 const CONST_DATA: i32 = 20;
-
-// This will be placed at the start of RAM
-#[link_section = ".data"]
 static mut GLOBAL_DATA: i32 = 10;
 
 // User's main function

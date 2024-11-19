@@ -32,22 +32,22 @@ pub fn syscall(nr: i32, a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32) ->
 // Code execution starts here. Embive initializes the stack pointer and jumps to this address.
 // This code is responsible for initializing the .bss and .data sections and calling the user's main function.
 // From: https://interrupt.memfault.com/blog/zero-to-main-rust-1
-#[link_section = ".entry"]
+#[link_section = ".text.init.entry"]
 #[no_mangle]
-fn entry() -> ! {
+fn _entry() -> ! {
     extern "C" {
         // These symbols come from `linker.ld`
-        static mut _sbss: u32; // Start of .bss section
-        static mut _ebss: u32; // End of .bss section
-        static mut _sdata: u32; // Start of .data section
-        static mut _edata: u32; // End of .data section
-        static _srodata: u32; // Start of .rodata section
+        static mut _bss_target_start: u32; // Start of .bss target
+        static mut _bss_target_end: u32; // End of .bss target
+        static mut _data_target_start: u32; // Start of .data target
+        static mut _data_target_end: u32; // End of .data target
+        static _data_source_start: u32; // Start of .data source
     }
 
     // Initialize (Zero) BSS
     unsafe {
-        let mut sbss: *mut u32 = addr_of_mut!(_sbss);
-        let ebss: *mut u32 = addr_of_mut!(_ebss);
+        let mut sbss: *mut u32 = addr_of_mut!(_bss_target_start);
+        let ebss: *mut u32 = addr_of_mut!(_bss_target_end);
 
         while sbss < ebss {
             write_volatile(sbss, zeroed());
@@ -57,14 +57,14 @@ fn entry() -> ! {
 
     // Initialize Data
     unsafe {
-        let mut sdata: *mut u32 = addr_of_mut!(_sdata);
-        let edata: *mut u32 = addr_of_mut!(_edata);
-        let mut rodata: *const u32 = &_srodata;
+        let mut sdata: *mut u32 = addr_of_mut!(_data_target_start);
+        let edata: *mut u32 = addr_of_mut!(_data_target_end);
+        let mut sdatas: *const u32 = &_data_source_start;
 
         while sdata < edata {
-            write_volatile(sdata, read(rodata));
+            write_volatile(sdata, read(sdatas));
             sdata = sdata.offset(1);
-            rodata = rodata.offset(1);
+            sdatas = sdatas.offset(1);
         }
     }
 
@@ -75,5 +75,7 @@ fn entry() -> ! {
     unsafe {
         asm!("ebreak");
     }
+
+    // Should never get here
     loop {}
 }
