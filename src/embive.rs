@@ -1,4 +1,9 @@
-use core::{arch::asm, mem::zeroed, panic::PanicInfo, ptr::{addr_of_mut, read, write_volatile}};
+use core::{
+    arch::asm,
+    mem::zeroed,
+    panic::PanicInfo,
+    ptr::{addr_of_mut, read, write_volatile},
+};
 
 // Panics will simply exit the interpreter (ebreak)
 // Here we could also make a system call to send the panic info to the host
@@ -10,23 +15,40 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// System Call. Check [syscall(2)](https://man7.org/linux/man-pages/man2/syscall.2.html). Must be implemented by the host.
-pub fn syscall(nr: i32, a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32) -> (i32, i32) {
-    let ret1: i32;
-    let ret2: i32;
+/// System Call. Must be implemented by the host.
+pub fn syscall(
+    nr: i32,
+    a0: i32,
+    a1: i32,
+    a2: i32,
+    a3: i32,
+    a4: i32,
+    a5: i32,
+    a6: i32,
+) -> Result<i32, i32> {
+    let error: i32;
+    let value: i32;
+
     unsafe {
         asm!(
             "ecall",
             in("a7") nr,
-            inlateout("a0") a0 => ret1,
-            inlateout("a1") a1 => ret2,
+            inlateout("a0") a0 => error,
+            inlateout("a1") a1 => value,
             in("a2") a2,
             in("a3") a3,
             in("a4") a4,
             in("a5") a5,
+            in("a6") a6,
+            options(nostack),
         );
     }
-    (ret1, ret2)
+
+    if error == 0 {
+        Ok(value)
+    } else {
+        Err(error)
+    }
 }
 
 // Code execution starts here. Embive initializes the stack pointer and jumps to this address.

@@ -38,7 +38,7 @@ To get the `data` and `bss` sizes, you can run:
 The result should be something like this:
 ```
    text    data     bss     dec     hex filename
-    152       4       0     156      9c embive-rust-template
+    172       4       0     176      b0 embive-rust-template
 ```
 
 For this result, if we chose a stack size of 512 bytes, our minimum RAM size then would be:  

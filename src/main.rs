@@ -17,10 +17,12 @@ static mut GLOBAL_DATA: i32 = 10;
 fn main() {
     // System Call 2: Get i32 value at address
     // The host will receive the GLOBAL_DATA address, read it from memory and return its value
-    let (val, _error) = syscall(2, addr_of!(GLOBAL_DATA) as i32, 0, 0, 0, 0, 0);
+    let result = syscall(2, addr_of!(GLOBAL_DATA) as i32, 0, 0, 0, 0, 0, 0);
 
     // Do something here
 
-    // System Call 1: Add two numbers (a0 + a1)
-    let (_res, _error) = syscall(1, val, CONST_DATA, 0, 0, 0, 0);
+    if let Ok(value) = result {
+        // System Call 1: Add two numbers (a0 + a1)
+        let _result = syscall(1, value, CONST_DATA, 0, 0, 0, 0, 0);
+    }
 }
