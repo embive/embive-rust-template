@@ -6,6 +6,8 @@ MEMORY
     ram (wrx) : ORIGIN = 0x80000000, LENGTH = 0x80000000 /* Set to maximum possible length */
 }
 
+STACK_SIZE = 0x200; /* Default stack size is 512 bytes */
+
 PHDRS
 {
     rom PT_LOAD;
@@ -40,12 +42,14 @@ SECTIONS
         *(.text.startup .text.startup.*)
         *(.text .text.*)
         *(.gnu.linkonce.t.*)
+        . = ALIGN(4);
     } >rom :text
 
     .data : ALIGN(4) {
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         . = ALIGN(4);
+        PROVIDE( __global_pointer$ = . + 0x800 );
         *(.sdata .sdata.* .sdata2.*)
         *(.gnu.linkonce.s.*)
     } >ram AT>rom :ram_init
@@ -55,9 +59,9 @@ SECTIONS
         *(.tdata .tdata.* .gnu.linkonce.td.*)
     } >ram AT>rom :tls :ram_init
 
-    PROVIDE( _data_source_start = LOADADDR(.data) );
-    PROVIDE( _data_target_start = ADDR(.data) );
-    PROVIDE( _data_target_end = ADDR(.tdata) + SIZEOF(.tdata) );
+    PROVIDE( __data_source_start = LOADADDR(.data) );
+    PROVIDE( __data_target_start = ADDR(.data) );
+    PROVIDE( __data_target_end = ADDR(.tdata) + SIZEOF(.tdata) );
 
     .tbss : ALIGN(4) {
 	    *(.tbss .tbss.* .gnu.linkonce.tb.*)
@@ -76,8 +80,13 @@ SECTIONS
         *(COMMON)
     } >ram :ram
 
-    PROVIDE( _bss_target_start = ADDR(.tbss) );
-    PROVIDE( _bss_target_end = ADDR(.bss) + SIZEOF(.bss) );
+    PROVIDE( __bss_target_start = ADDR(.tbss) );
+    PROVIDE( __bss_target_end = ADDR(.bss) + SIZEOF(.bss) );
+
+    .stack (NOLOAD) : ALIGN(16) {
+        . += STACK_SIZE;
+        PROVIDE( __stack_start = . );
+    } >ram :ram
 
     /DISCARD/ : {
 	    *(.eh_frame .eh_frame.*)
