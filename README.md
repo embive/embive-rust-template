@@ -20,7 +20,7 @@ A simple program that runs inside the Embive interpreter.
 - Create a new project
     - `$ cargo new embive-project && cd embive-project`
 - Add Embive as a dependency
-    - `$ cargo add embive`
+    - `$ cargo add embive --features m_extension`
 - Copy the example from Embive's docs/readme.
 - Swap the line `let code = ...` to `let code = include_bytes!("../app.bin");`
     - You can also remove the line `ram[..4].copy_from_slice...` (not needed / unused).
