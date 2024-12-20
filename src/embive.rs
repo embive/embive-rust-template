@@ -1,28 +1,25 @@
+#![allow(dead_code)]
+
 use core::{
     arch::{asm, global_asm},
     mem::zeroed,
-    panic::PanicInfo,
+    num::NonZeroI32,
     ptr::{addr_of_mut, read, write_volatile},
 };
 
-// Panics will simply exit the interpreter (ebreak)
-// Here we could also make a system call to send the panic info to the host
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    unsafe { asm!("ebreak", options(nostack, noreturn)) }
-}
+/// Number of syscall arguments
+pub const SYSCALL_ARGS: usize = 7;
 
 /// System Call. Must be implemented by the host.
-pub fn syscall(
-    nr: i32,
-    a0: i32,
-    a1: i32,
-    a2: i32,
-    a3: i32,
-    a4: i32,
-    a5: i32,
-    a6: i32,
-) -> Result<i32, i32> {
+///
+/// Parameters:
+/// - nr: System call number
+/// - args: Array of arguments
+///
+/// Returns:
+/// - Ok(value): The system call was successful.
+/// - Err(error): The system call failed.
+pub fn syscall(nr: i32, args: &[i32; SYSCALL_ARGS]) -> Result<i32, NonZeroI32> {
     let error: i32;
     let value: i32;
 
@@ -30,21 +27,59 @@ pub fn syscall(
         asm!(
             "ecall",
             in("a7") nr,
-            inlateout("a0") a0 => error,
-            inlateout("a1") a1 => value,
-            in("a2") a2,
-            in("a3") a3,
-            in("a4") a4,
-            in("a5") a5,
-            in("a6") a6,
+            inlateout("a0") args[0] => error,
+            inlateout("a1") args[1] => value,
+            in("a2") args[2],
+            in("a3") args[3],
+            in("a4") args[4],
+            in("a5") args[5],
+            in("a6") args[6],
             options(nostack),
         );
     }
 
-    if error == 0 {
-        Ok(value)
-    } else {
-        Err(error)
+    match NonZeroI32::new(error) {
+        Some(error) => Err(error),
+        None => Ok(value),
+    }
+}
+
+/// Wait For Interrupt
+///
+/// Ask the host to put the interpreter to sleep until an interruption occurs
+/// May return without any interruption.
+#[inline(always)]
+pub fn wfi() {
+    unsafe {
+        asm!("wfi", options(nostack));
+    }
+}
+
+/// Exit the interpreter
+#[inline(always)]
+pub fn ebreak() -> ! {
+    unsafe {
+        asm!("ebreak", options(nostack, noreturn));
+    }
+}
+
+/// Enable Interrupts
+///
+/// Set the `mstatus.MIE` bit to 1
+#[inline(always)]
+pub fn enable_interrupts() {
+    unsafe {
+        asm!("csrsi mstatus, 8", options(nostack));
+    }
+}
+
+/// Disable Interrupts
+///
+/// Set the `mstatus.MIE` bit to 0
+#[inline(always)]
+pub fn disable_interrupts() {
+    unsafe {
+        asm!("csrci mstatus, 8", options(nostack));
     }
 }
 
@@ -54,23 +89,79 @@ global_asm! {
     ".section .text.init.entry, \"ax\"",
     ".global _entry",
     "_entry:",
-    // Initialize global pointer
     ".option push",
     ".option norelax",
+    // Initialize global pointer
     "la gp, __global_pointer$",
-    ".option pop",
+    // Set interrupt trap
+    "la t0, _interrupt_trap",
+    "csrw mtvec, t0",
+    // Enable embive interrupt (mie bit 16)
+    "la t0, 65536",
+    "csrw mie, t0",
     // Initialize stack and frame pointers
     "la t1, __stack_start",
     "andi sp, t1, -16",
     "add s0, sp, zero",
+    ".option pop",
     // Call _code_entry
-    "jal ra, _code_entry"
+    "jal ra, _code_entry",
+}
+
+// Interrupt trap
+global_asm! {
+    ".option push",
+    ".balign 0x4",
+    ".option norelax",
+    ".option norvc",
+    "_interrupt_trap:",
+    // Save registers
+    "addi sp, sp, -16*4",
+    "sw ra, 0*4(sp)",
+    "sw t0, 1*4(sp)",
+    "sw t1, 2*4(sp)",
+    "sw t2, 3*4(sp)",
+    "sw t3, 4*4(sp)",
+    "sw t4, 5*4(sp)",
+    "sw t5, 6*4(sp)",
+    "sw t6, 7*4(sp)",
+    "sw a0, 8*4(sp)",
+    "sw a1, 9*4(sp)",
+    "sw a2, 10*4(sp)",
+    "sw a3, 11*4(sp)",
+    "sw a4, 12*4(sp)",
+    "sw a5, 13*4(sp)",
+    "sw a6, 14*4(sp)",
+    "sw a7, 15*4(sp)",
+    // Call interrupt handler
+    "jal ra, interrupt_handler",
+    // Restore registers
+    "lw ra, 0*4(sp)",
+    "lw t0, 1*4(sp)",
+    "lw t1, 2*4(sp)",
+    "lw t2, 3*4(sp)",
+    "lw t3, 4*4(sp)",
+    "lw t4, 5*4(sp)",
+    "lw t5, 6*4(sp)",
+    "lw t6, 7*4(sp)",
+    "lw a0, 8*4(sp)",
+    "lw a1, 9*4(sp)",
+    "lw a2, 10*4(sp)",
+    "lw a3, 11*4(sp)",
+    "lw a4, 12*4(sp)",
+    "lw a5, 13*4(sp)",
+    "lw a6, 14*4(sp)",
+    "lw a7, 15*4(sp)",
+    "addi sp, sp, 16*4",
+    // Return from trap
+    "mret",
+    ".option pop",
 }
 
 /// This code is responsible for initializing the .bss and .data sections, and calling the user's main function.
 /// Based on: https://interrupt.memfault.com/blog/zero-to-main-rust-1
 #[no_mangle]
-unsafe fn _code_entry() -> ! {
+unsafe extern "C" fn _code_entry() -> ! {
     extern "C" {
         // These symbols come from `linker.ld`
         static mut __bss_target_start: u32; // Start of .bss target
@@ -104,5 +195,5 @@ unsafe fn _code_entry() -> ! {
     crate::main();
 
     // Exit the interpreter
-    asm!("ebreak", options(nostack, noreturn))
+    ebreak()
 }

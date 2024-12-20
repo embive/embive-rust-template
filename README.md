@@ -23,14 +23,13 @@ A simple program that runs inside the Embive interpreter.
     - `$ cargo add embive --features m_extension`
 - Copy the example from Embive's docs/readme.
 - Swap the line `let code = ...` to `let code = include_bytes!("../app.bin");`
-    - You can also remove the line `ram[..4].copy_from_slice...` (not needed / unused).
 - Copy the generated `app.bin` to your project
 - Run it:  
     - `$ cargo run --release`
 
 ## Stack Size
 By default, the stack size is set to 512 bytes (0x200).  
-You can change this by modifying the `STACK_SIZE` variable on the [linker script](memory.ld).  
+You can change this by modifying the `STACK_SIZE` variable in the [linker script](memory.ld).  
 The stack size should always be a multiple of 16 bytes.
 
 ## RAM calculation
@@ -44,7 +43,7 @@ To get the `data` and `bss` sizes, you can run:
 The result should be something like this:
 ```
    text    data     bss     dec     hex filename
-    224       4     512     740     2e4 embive-rust-template
+    400       4     512     916     394 embive-rust-template
 ```
 
 For this result, our minimum RAM size then would be:  
