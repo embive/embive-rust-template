@@ -6,7 +6,8 @@ MEMORY
     ram (wrx) : ORIGIN = 0x80000000, LENGTH = 0x80000000 /* Set to maximum possible length */
 }
 
-STACK_SIZE = 0x200; /* Default stack size is 512 bytes */
+STACK_SIZE = 0x400; /* Default stack size is 1024 bytes */
+HEAP_SIZE  = 0x400; /* Default heap size is 1024 bytes */
 
 PHDRS
 {
@@ -64,12 +65,12 @@ SECTIONS
     PROVIDE( __data_target_end = ADDR(.tdata) + SIZEOF(.tdata) );
 
     .tbss : ALIGN(4) {
-	    *(.tbss .tbss.* .gnu.linkonce.tb.*)
-	    *(.tcommon .tcommon.*)
+        *(.tbss .tbss.* .gnu.linkonce.tb.*)
+        *(.tcommon .tcommon.*)
     } >ram AT>ram :tls :ram
 
     .tbss_space : ALIGN(4) {
-	    . = . + SIZEOF(.tbss);
+        . = . + SIZEOF(.tbss);
     } >ram :ram
 
     .bss (NOLOAD): ALIGN(4) {
@@ -83,12 +84,18 @@ SECTIONS
     PROVIDE( __bss_target_start = ADDR(.tbss) );
     PROVIDE( __bss_target_end = ADDR(.bss) + SIZEOF(.bss) );
 
+    .heap (NOLOAD) : ALIGN(4) {
+        PROVIDE(_end = .);
+        . += HEAP_SIZE;
+        . = ALIGN(16);
+    } >ram :ram
+
     .stack (NOLOAD) : ALIGN(16) {
         . += STACK_SIZE;
         PROVIDE( __stack_start = . );
     } >ram :ram
 
     /DISCARD/ : {
-	    *(.eh_frame .eh_frame.*)
+        *(.eh_frame .eh_frame.*)
     }
 }
