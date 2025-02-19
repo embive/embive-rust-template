@@ -3,27 +3,25 @@ A simple program that runs inside the Embive interpreter.
 
 ## Requirements
 - Rust (stable)
-- riscv32im-unknown-none-elf target
-    - `$ rustup target add riscv32im-unknown-none-elf`
+- riscv32imc-unknown-none-elf target
+    - `$ rustup target add riscv32imac-unknown-none-elf`
 - cargo-binutils
     - `$ cargo install cargo-binutils`
 - llvm-tools
     - `$ rustup component add llvm-tools`
 
 ## How to build
-- Compile the project
-    - `$ cargo build --release`
-- Convert the output ELF to a flat binary
-    - `$ cargo objcopy --release -- -O binary app.bin`
+- Compile the project and generate the ELF file:
+    - `$ cargo objcopy --release -- app.elf`
 
 ## How to run
 - Create a new project
     - `$ cargo new embive-project && cd embive-project`
 - Add Embive as a dependency
-    - `$ cargo add embive --features m_extension`
+    - `$ cargo add embive`
 - Copy the example from Embive's docs/readme.
-- Swap the line `let code = ...` to `let code = include_bytes!("../app.bin");`
-- Copy the generated `app.bin` to your project
+- Swap the line `const ELF_FILE: &[u8] ...` to `const ELF_FILE: &[u8] = include_bytes!("../app.elf");`
+- Copy the generated `app.elf` to your project
 - Run it:  
     - `$ cargo run --release`
 
@@ -48,7 +46,7 @@ To get the `data` and `bss` sizes, you can run:
 The result should be something like this:
 ```
    text    data     bss     dec     hex filename
-    400       4    2060    2464     9a0 embive-rust-template
+    340       4    2060    2404     964 embive-rust-template
 ```
 
 For this result, our minimum RAM size then would be:  
