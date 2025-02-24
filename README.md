@@ -3,7 +3,7 @@ A simple program that runs inside the Embive interpreter.
 
 ## Requirements
 - Rust (stable)
-- riscv32imc-unknown-none-elf target
+- riscv32imac-unknown-none-elf target
     - `$ rustup target add riscv32imac-unknown-none-elf`
 - cargo-binutils
     - `$ cargo install cargo-binutils`
@@ -33,7 +33,9 @@ The stack size should always be a multiple of 16 bytes.
 ## Heap Size
 By default, the heap size is set to 1024 bytes (0x400).  
 You can change this by modifying the `HEAP_SIZE` variable in the [linker script](memory.ld).  
-The heap end address will always be aligned to 16 bytes.
+The heap end address will always be aligned to 16 bytes.  
+**Check `embive::get_heap` for more information about how to use the heap**  
+**If not using the heap, you may set `HEAP_SIZE` to zero.**
 
 ## RAM calculation
 You can calculate the minimum amount of RAM needed by you application with the following equation:  

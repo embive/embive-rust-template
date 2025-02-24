@@ -5,9 +5,9 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
+critical-section = { version = "1.2.0", features = ["restore-state-bool"] }
 
 [profile.release]
-lto = true
 opt-level = "s"
 codegen-units = 1
 panic = "abort"

@@ -86,8 +86,10 @@ SECTIONS
 
     .heap (NOLOAD) : ALIGN(4) {
         PROVIDE(_end = .);
+        PROVIDE(_sheap = .);
         . += HEAP_SIZE;
         . = ALIGN(16);
+        PROVIDE(_eheap = .);
     } >ram :ram
 
     .stack (NOLOAD) : ALIGN(16) {

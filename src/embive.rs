@@ -4,11 +4,29 @@ use core::{
     arch::{asm, global_asm},
     mem::zeroed,
     num::NonZeroI32,
-    ptr::{addr_of_mut, read, write_volatile},
+    ptr::{addr_of, addr_of_mut, read, write_volatile},
 };
+
+use critical_section::{set_impl, Impl, RawRestoreState};
 
 /// Number of syscall arguments
 pub const SYSCALL_ARGS: usize = 7;
+
+// Critical section implementation
+struct EmbiveCriticalSection;
+set_impl!(EmbiveCriticalSection);
+
+unsafe impl Impl for EmbiveCriticalSection {
+    unsafe fn acquire() -> RawRestoreState {
+        disable_interrupts()
+    }
+
+    unsafe fn release(previous: RawRestoreState) {
+        if previous {
+            enable_interrupts();
+        }
+    }
+}
 
 /// System Call. Must be implemented by the host.
 ///
@@ -34,7 +52,6 @@ pub fn syscall(nr: i32, args: &[i32; SYSCALL_ARGS]) -> Result<i32, NonZeroI32> {
             in("a4") args[4],
             in("a5") args[5],
             in("a6") args[6],
-            options(nostack),
         );
     }
 
@@ -66,21 +83,53 @@ pub fn ebreak() -> ! {
 /// Enable Interrupts
 ///
 /// Set the `mstatus.MIE` bit to 1
+///
+/// Returns the previous state of the `mstatus.MIE` bit
 #[inline(always)]
-pub fn enable_interrupts() {
+pub fn enable_interrupts() -> bool {
+    let mut mstatus: usize;
     unsafe {
-        asm!("csrsi mstatus, 8", options(nostack));
+        asm!("csrrsi {}, mstatus, 8", out(reg) mstatus);
     }
+
+    (mstatus & 8) != 0
 }
 
 /// Disable Interrupts
 ///
 /// Set the `mstatus.MIE` bit to 0
+///
+/// Returns the previous state of the `mstatus.MIE` bit
 #[inline(always)]
-pub fn disable_interrupts() {
+pub fn disable_interrupts() -> bool {
+    let mut mstatus: usize;
     unsafe {
-        asm!("csrci mstatus, 8", options(nostack));
+        asm!("csrrci {}, mstatus, 8", out(reg) mstatus);
     }
+
+    (mstatus & 8) != 0
+}
+
+/// Get heap region from linker script
+///
+/// Returns a tuple with the heap start address and size
+///
+/// Example:
+/// ```
+/// let (addr, size) = embive::get_heap();
+/// unsafe { HEAP.init(addr, size); }
+/// ```
+/// Check: https://github.com/rust-embedded/embedded-alloc
+pub fn get_heap() -> (usize, usize) {
+    extern "C" {
+        static _sheap: u8;
+        static _eheap: u8;
+    }
+
+    let start = addr_of!(_sheap) as usize;
+    let end = addr_of!(_eheap) as usize;
+
+    (start, end - start)
 }
 
 // Binary entry point
