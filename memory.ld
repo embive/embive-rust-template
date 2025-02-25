@@ -1,101 +1,82 @@
 ENTRY(_entry)
 
-MEMORY
-{
-    rom (rx) : ORIGIN = 0x00000000, LENGTH = 0x80000000 /* Set to maximum possible length */
-    ram (wrx) : ORIGIN = 0x80000000, LENGTH = 0x80000000 /* Set to maximum possible length */
+STACK_SIZE = 0x800; /* Default stack size is 2048 bytes */
+
+MEMORY {
+    ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 0x80000000 /* Set to maximum possible length */
+    RAM (wrx) : ORIGIN = 0x80000000, LENGTH = 0x80000000 /* Set to maximum possible length */
 }
 
-STACK_SIZE = 0x400; /* Default stack size is 1024 bytes */
-HEAP_SIZE  = 0x400; /* Default heap size is 1024 bytes */
-
-PHDRS
-{
-    rom PT_LOAD;
-    ram_init PT_LOAD;
-    tls PT_TLS;
-    ram PT_LOAD;
-    text PT_LOAD;
-}
-
-SECTIONS
-{
-    .init : {
+SECTIONS {
+    .text : ALIGN(4) {
         KEEP (*(.text.init.entry))
         KEEP (*(.text.init.*))
         KEEP (*(SORT_NONE(.init)))
-    } >rom :rom
-
-    .rodata : {
-        *(.rdata)
-        *(.rodata .rodata.*)
-        *(.gnu.linkonce.r.*)
+        *(.text*);
         . = ALIGN(4);
-        *(.srodata.cst16)
-        *(.srodata.cst8)
-        *(.srodata.cst4)
-        *(.srodata.cst2)
-        *(.srodata .srodata.*)
-    } >rom :rom
+    } > ROM
 
-    .text : {
-        *(.text.unlikely .text.unlikely.*)
-        *(.text.startup .text.startup.*)
-        *(.text .text.*)
-        *(.gnu.linkonce.t.*)
+    .rodata : ALIGN(4) {
+        . = ALIGN(8);
+        *(.rodata*);
+        *(.srodata*);
+        *(.gcc_except_table*);
         . = ALIGN(4);
-    } >rom :text
+    } > ROM
+
+    .preinit_array : ALIGN(4) {
+        __preinit_array_start = .;
+        KEEP(*(.preinit_array*));
+        __preinit_array_end = .;
+    } > ROM
+
+    .init_array : ALIGN(4) {
+        __init_array_start = .;
+        KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*)));
+        KEEP(*(.init_array*));
+        __init_array_end = .;
+    } > ROM
+
+    .fini_array : ALIGN(4) {
+        __fini_array_start = .;
+        KEEP(*(SORT_BY_INIT_PRIORITY(.fini_array.*)));
+        KEEP(*(.fini_array*));
+        __fini_array_end = .;
+    } > ROM
 
     .data : ALIGN(4) {
-        *(.data .data.*)
-        *(.gnu.linkonce.d.*)
-        . = ALIGN(4);
-        PROVIDE( __global_pointer$ = . + 0x800 );
-        *(.sdata .sdata.* .sdata2.*)
-        *(.gnu.linkonce.s.*)
-    } >ram AT>rom :ram_init
+        . = ALIGN(8);
+        __data_target_start = .;
+        *(.data*);
+        __global_pointer$ = . + 0x800;
+        *(.sdata*);
+        *(.sdata2*);
+        . = ALIGN(8);
+        __data_target_end = .;
+    } > RAM AT > ROM
+    __data_source_start = LOADADDR(.data);
 
-    .tdata : ALIGN(4) {
-        PROVIDE( __tls_base = . );
-        *(.tdata .tdata.* .gnu.linkonce.td.*)
-    } >ram AT>rom :tls :ram_init
+    .bss (NOLOAD) : ALIGN(4) {
+        . = ALIGN(8);
+        __bss_target_start = .;
+        _bss = .;
+        *(.bss*);
+        *(.sbss*);
+        *(.sbss2*);
+        *(COMMON*);
+        . = ALIGN(8);
+        __bss_target_end = .;
+    } > RAM
 
-    PROVIDE( __data_source_start = LOADADDR(.data) );
-    PROVIDE( __data_target_start = ADDR(.data) );
-    PROVIDE( __data_target_end = ADDR(.tdata) + SIZEOF(.tdata) );
-
-    .tbss : ALIGN(4) {
-        *(.tbss .tbss.* .gnu.linkonce.tb.*)
-        *(.tcommon .tcommon.*)
-    } >ram AT>ram :tls :ram
-
-    .tbss_space : ALIGN(4) {
-        . = . + SIZEOF(.tbss);
-    } >ram :ram
-
-    .bss (NOLOAD): ALIGN(4) {
-        *(.sbss*)
-        *(.gnu.linkonce.sb.*)
-        *(.bss .bss.*)
-        *(.gnu.linkonce.b.*)
-        *(COMMON)
-    } >ram :ram
-
-    PROVIDE( __bss_target_start = ADDR(.tbss) );
-    PROVIDE( __bss_target_end = ADDR(.bss) + SIZEOF(.bss) );
-
-    .heap (NOLOAD) : ALIGN(4) {
-        PROVIDE(_end = .);
-        PROVIDE(_sheap = .);
-        . += HEAP_SIZE;
-        . = ALIGN(16);
-        PROVIDE(_eheap = .);
-    } >ram :ram
-
-    .stack (NOLOAD) : ALIGN(16) {
+    .stack (NOLOAD) : ALIGN(4) {
         . += STACK_SIZE;
+        . = ALIGN(16);
         PROVIDE( __stack_start = . );
-    } >ram :ram
+        PROVIDE(_end = .);
+    } > RAM
+
+    _ram  = ORIGIN(RAM);
+    _eram = ORIGIN(RAM) + LENGTH(RAM);
 
     /DISCARD/ : {
         *(.eh_frame .eh_frame.*)

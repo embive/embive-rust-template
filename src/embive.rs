@@ -110,26 +110,23 @@ pub fn disable_interrupts() -> bool {
     (mstatus & 8) != 0
 }
 
-/// Get heap region from linker script
+/// Get heap address from linker script
 ///
-/// Returns a tuple with the heap start address and size
+/// Returns the heap start address (memory address after data and stack).
+/// Any leftover memory allocated by the host can be used as heap.
 ///
 /// Example:
 /// ```
-/// let (addr, size) = embive::get_heap();
-/// unsafe { HEAP.init(addr, size); }
+/// let addr = embive::get_heap();
+/// unsafe { HEAP.init(addr, 1024); }
 /// ```
 /// Check: https://github.com/rust-embedded/embedded-alloc
-pub fn get_heap() -> (usize, usize) {
+pub fn get_heap() -> usize {
     extern "C" {
-        static _sheap: u8;
-        static _eheap: u8;
+        static _end: u8;
     }
 
-    let start = addr_of!(_sheap) as usize;
-    let end = addr_of!(_eheap) as usize;
-
-    (start, end - start)
+    addr_of!(_end) as usize
 }
 
 // Binary entry point
