@@ -17,9 +17,9 @@ SECTIONS {
     } > ROM
 
     .rodata : ALIGN(4) {
-        . = ALIGN(8);
+        . = ALIGN(4);
+        *(.rodata)
         *(.rodata*);
-        *(.srodata*);
         *(.gcc_except_table*);
         . = ALIGN(4);
     } > ROM
@@ -45,26 +45,32 @@ SECTIONS {
     } > ROM
 
     .data : ALIGN(4) {
-        . = ALIGN(8);
         __data_target_start = .;
-        *(.data*);
+        *(.data .data.*)
+        . = ALIGN(8);
         __global_pointer$ = . + 0x800;
-        *(.sdata*);
+        *(.sdata .sdata.*)
         *(.sdata2*);
         . = ALIGN(8);
+        *(.srodata.cst16)
+    	*(.srodata.cst8)
+    	*(.srodata.cst4)
+    	*(.srodata.cst2)
+    	*(.srodata .srodata.*)
+        . = ALIGN(4);
         __data_target_end = .;
     } > RAM AT > ROM
     __data_source_start = LOADADDR(.data);
 
     .bss (NOLOAD) : ALIGN(4) {
-        . = ALIGN(8);
+        . = ALIGN(4);
         __bss_target_start = .;
         _bss = .;
         *(.bss*);
         *(.sbss*);
         *(.sbss2*);
         *(COMMON*);
-        . = ALIGN(8);
+        . = ALIGN(4);
         __bss_target_end = .;
     } > RAM
 
