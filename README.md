@@ -45,8 +45,8 @@ To get the `data` and `bss` sizes, you can run:
 The result should be something like this:
 ```
    text    data     bss     dec     hex filename
-    344       8    2056    2408     968 embive-rust-template
+    376       4    2052    2432     980 embive-rust-template
 ```
 
 For this result, our minimum RAM size then would be:  
-- `total_ram = 8 + 2056 = 2064 bytes`
+- `total_ram = 4 + 2052 = 2056 bytes`

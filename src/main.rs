@@ -3,12 +3,12 @@
 
 mod embive;
 
-use core::{panic::PanicInfo, ptr::addr_of};
+use core::{panic::PanicInfo, ptr::addr_of, sync::atomic::{AtomicI32, Ordering}};
 
 use embive::{ebreak, enable_interrupts, syscall, wfi};
 
-const CONST_DATA: i32 = 20;
-static mut GLOBAL_DATA: i32 = 10;
+static CONST_DATA: i32 = 20;
+static GLOBAL_DATA: AtomicI32 = AtomicI32::new(0);
 
 /// Panics will simply exit the interpreter (ebreak)
 /// Here we could also make a system call to send the panic info to the host
@@ -20,8 +20,9 @@ fn panic(_info: &PanicInfo) -> ! {
 /// Interrupt handler
 /// This function is called when an interruption occurs
 #[no_mangle]
-fn interrupt_handler() {
-    // Do something here
+fn interrupt_handler(value: i32) {
+    // Set GLOBAL_DATA to the received value
+    GLOBAL_DATA.store(value, Ordering::SeqCst);
 }
 
 // User's main function
@@ -33,14 +34,14 @@ fn main() {
     enable_interrupts();
 
     // System Call 2: Get i32 value at address
-    // The host will receive the GLOBAL_DATA address, read it from memory and return its value
-    let result = syscall(2, &[addr_of!(GLOBAL_DATA) as i32, 0, 0, 0, 0, 0, 0]);
+    // The host will receive the CONST_DATA address, read it from memory and return its value
+    let result = syscall(2, &[addr_of!(CONST_DATA) as i32, 0, 0, 0, 0, 0, 0]);
 
     // Wait for an interrupt
     wfi();
 
     if let Ok(value) = result {
         // System Call 1: Add two numbers (a0 + a1)
-        let _result = syscall(1, &[value, CONST_DATA, 0, 0, 0, 0, 0]);
+        let _result = syscall(1, &[value, GLOBAL_DATA.load(Ordering::SeqCst), 0, 0, 0, 0, 0]);
     }
 }

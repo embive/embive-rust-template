@@ -179,6 +179,8 @@ global_asm! {
     "sw a5, 13*4(sp)",
     "sw a6, 14*4(sp)",
     "sw a7, 15*4(sp)",
+    // Load trap value
+    "csrr a0, mtval",
     // Call interrupt handler
     "jal ra, interrupt_handler",
     // Restore registers
