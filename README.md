@@ -30,7 +30,7 @@ By default, the stack size is set to 2048 bytes (0x800).
 You can change this by modifying the `STACK_SIZE` variable in the [linker script](memory.ld).
 
 ## Heap
-The heap is set at the end of the memory space allocated by the application (after data and stack).  
+The heap is set at the end of the memory space allocated by the application (after stack and stack).  
 As such, the heap size doesn't need to be known at link time, instead being able to grow as large
 as the maximum memory available.
 

@@ -13,15 +13,14 @@ SECTIONS {
         KEEP (*(.text.init.*))
         KEEP (*(SORT_NONE(.init)))
         *(.text*);
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > ROM
 
     .rodata : ALIGN(4) {
-        . = ALIGN(4);
         *(.rodata)
         *(.rodata*);
         *(.gcc_except_table*);
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > ROM
 
     .preinit_array : ALIGN(4) {
@@ -44,6 +43,20 @@ SECTIONS {
         __fini_array_end = .;
     } > ROM
 
+    .bss (NOLOAD) : ALIGN(4) {
+        . += STACK_SIZE;
+        . = ALIGN(16);
+        __stack_start = . ;
+        __bss_target_start = .;
+        _bss = .;
+        *(.bss*);
+        *(.sbss*);
+        *(.sbss2*);
+        *(COMMON*);
+        . = ALIGN(8);
+        __bss_target_end = .;
+    } > RAM
+
     .data : ALIGN(4) {
         __data_target_start = .;
         *(.data .data.*)
@@ -57,29 +70,11 @@ SECTIONS {
     	*(.srodata.cst4)
     	*(.srodata.cst2)
     	*(.srodata .srodata.*)
-        . = ALIGN(4);
+        . = ALIGN(8);
         __data_target_end = .;
+        _end = .;
     } > RAM AT > ROM
     __data_source_start = LOADADDR(.data);
-
-    .bss (NOLOAD) : ALIGN(4) {
-        . = ALIGN(4);
-        __bss_target_start = .;
-        _bss = .;
-        *(.bss*);
-        *(.sbss*);
-        *(.sbss2*);
-        *(COMMON*);
-        . = ALIGN(4);
-        __bss_target_end = .;
-    } > RAM
-
-    .stack (NOLOAD) : ALIGN(4) {
-        . += STACK_SIZE;
-        . = ALIGN(16);
-        PROVIDE( __stack_start = . );
-        PROVIDE(_end = .);
-    } > RAM
 
     _ram  = ORIGIN(RAM);
     _eram = ORIGIN(RAM) + LENGTH(RAM);
